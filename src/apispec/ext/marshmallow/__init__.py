@@ -88,12 +88,7 @@ from .schema_resolver import SchemaResolver
 
 def resolver(schema: type[Schema]) -> str:
     """Default schema name resolver function that strips 'Schema' from the end of the class name."""
-    resolved = resolve_schema_cls(schema)
-    schema_cls = resolved[0] if isinstance(resolved, list) else resolved
-    name = schema_cls.__name__
-    if name.endswith("Schema"):
-        name = name[:-6] or name
-    return name.strip()
+    pass
 
 
 class MarshmallowPlugin(BasePlugin):
@@ -129,17 +124,7 @@ class MarshmallowPlugin(BasePlugin):
         self.resolver: SchemaResolver | None = None
 
     def init_spec(self, spec: APISpec) -> None:
-        super().init_spec(spec)
-        self.spec = spec
-        self.openapi_version = spec.openapi_version
-        self.converter = self.Converter(
-            openapi_version=spec.openapi_version,
-            schema_name_resolver=self.schema_name_resolver,
-            spec=spec,
-        )
-        self.resolver = self.Resolver(
-            openapi_version=spec.openapi_version, converter=self.converter
-        )
+        pass
 
     def map_to_openapi_type(self, field_cls, *args):
         """Set mapping for custom field class.
@@ -165,8 +150,7 @@ class MarshmallowPlugin(BasePlugin):
 
             ma_plugin.map_to_openapi_type(IntegerLike, Integer)
         """
-        assert self.converter is not None, "init_spec has not yet been called"
-        return self.converter.map_to_openapi_type(field_cls, *args)
+        pass
 
     def schema_helper(self, name, _, schema=None, **kwargs):
         """Definition helper that allows using a marshmallow
@@ -196,9 +180,7 @@ class MarshmallowPlugin(BasePlugin):
         :param dict parameter: parameter fields. May contain a marshmallow
             Schema class or instance.
         """
-        assert self.resolver is not None, "init_spec has not yet been called"
-        self.resolver.resolve_schema(parameter)
-        return parameter
+        pass
 
     def response_helper(self, response, **kwargs):
         """Response component helper that allows using a marshmallow
@@ -207,9 +189,7 @@ class MarshmallowPlugin(BasePlugin):
         :param dict parameter: response fields. May contain a marshmallow
             Schema class or instance.
         """
-        assert self.resolver is not None, "init_spec has not yet been called"
-        self.resolver.resolve_response(response)
-        return response
+        pass
 
     def header_helper(self, header: dict, **kwargs: typing.Any):
         """Header component helper that allows using a marshmallow
@@ -218,9 +198,7 @@ class MarshmallowPlugin(BasePlugin):
         :param dict header: header fields. May contain a marshmallow
             Schema class or instance.
         """
-        assert self.resolver  # needed for mypy
-        self.resolver.resolve_schema(header)
-        return header
+        pass
 
     def operation_helper(
         self,
@@ -228,8 +206,7 @@ class MarshmallowPlugin(BasePlugin):
         operations: dict | None = None,
         **kwargs: typing.Any,
     ) -> None:
-        assert self.resolver  # needed for mypy
-        self.resolver.resolve_operations(operations)
+        pass
 
     def warn_if_schema_already_in_spec(self, schema_key: tuple) -> None:
         """Method to warn the user if the schema has already been added to the

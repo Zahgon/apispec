@@ -70,10 +70,7 @@ class OpenAPIConverter(FieldConverterMixin):
         self.refs: dict = {}
 
     def init_parameter_attribute_functions(self) -> None:
-        self.parameter_attribute_functions = [
-            self.field2required,
-            self.list2param,
-        ]
+        pass
 
     def add_parameter_attribute_function(self, func) -> None:
         """Method to add a field parameter function to the list of field
@@ -92,9 +89,7 @@ class OpenAPIConverter(FieldConverterMixin):
             User added field parameter functions will be called after all built-in
             field parameter functions in the order they were added.
         """
-        bound_func = func.__get__(self)
-        setattr(self, func.__name__, bound_func)
-        self.parameter_attribute_functions.append(bound_func)
+        pass
 
     def resolve_nested_schema(self, schema):
         """Return the OpenAPI representation of a marshmallow Schema.
@@ -108,32 +103,7 @@ class OpenAPIConverter(FieldConverterMixin):
 
         :param schema: schema to add to the spec
         """
-        try:
-            schema_instance = resolve_schema_instance(schema)
-        # If schema is a string and is not found in registry,
-        # assume it is a schema reference
-        except marshmallow.exceptions.RegistryError:
-            return schema
-        schema_key = make_schema_key(schema_instance)
-        if schema_key not in self.refs:
-            name = self.schema_name_resolver(schema)
-            if not name:
-                try:
-                    json_schema = self.schema2jsonschema(schema_instance)
-                except RuntimeError as exc:
-                    raise APISpecError(
-                        f"Name resolver returned None for schema {schema} which is "
-                        "part of a chain of circular referencing schemas. Please"
-                        " ensure that the schema_name_resolver passed to"
-                        " MarshmallowPlugin returns a string for all circular"
-                        " referencing schemas."
-                    ) from exc
-                if getattr(schema, "many", False):
-                    return {"type": "array", "items": json_schema}
-                return json_schema
-            name = get_unique_schema_name(self.spec.components, name)
-            self.spec.components.schema(name, schema=schema)
-        return self.get_ref_dict(schema_instance)
+        pass
 
     def schema2parameters(
         self,
@@ -154,33 +124,7 @@ class OpenAPIConverter(FieldConverterMixin):
 
         https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#parameterObject
         """
-        location = __location_map__.get(location, location)
-        # OAS 2 body parameter
-        if location == "body":
-            param = {
-                "in": location,
-                "required": required,
-                "name": name,
-                "schema": self.resolve_nested_schema(schema),
-            }
-            if description:
-                param["description"] = description
-            return [param]
-
-        assert not getattr(schema, "many", False), (
-            "Schemas with many=True are only supported for 'json' location (aka 'in: body')"
-        )
-
-        fields = get_fields(schema, exclude_dump_only=True)
-
-        return [
-            self._field2parameter(
-                field_obj,
-                name=field_obj.data_key or field_name,
-                location=location,
-            )
-            for field_name, field_obj in fields.items()
-        ]
+        pass
 
     def _field2parameter(
         self, field: marshmallow.fields.Field, *, name: str, location: str
@@ -190,22 +134,7 @@ class OpenAPIConverter(FieldConverterMixin):
 
         https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#parameterObject
         """
-        ret: dict = {"in": location, "name": name}
-
-        prop = self.field2property(field)
-        if self.openapi_version.major < 3:
-            ret.update(prop)
-        else:
-            if "description" in prop:
-                ret["description"] = prop.pop("description")
-            if "deprecated" in prop:
-                ret["deprecated"] = prop.pop("deprecated")
-            ret["schema"] = prop
-
-        for param_attr_func in self.parameter_attribute_functions:
-            ret.update(param_attr_func(field, ret=ret))
-
-        return ret
+        pass
 
     def field2required(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -215,12 +144,7 @@ class OpenAPIConverter(FieldConverterMixin):
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        partial = getattr(field.parent, "partial", False)
-        ret["required"] = field.required and (
-            not partial or (is_collection(partial) and field.name not in partial)
-        )
-        return ret
+        pass
 
     def list2param(self, field: marshmallow.fields.Field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of parameter properties from
@@ -229,14 +153,7 @@ class OpenAPIConverter(FieldConverterMixin):
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret: dict = {}
-        if isinstance(field, marshmallow.fields.List):
-            if self.openapi_version.major < 3:
-                ret["collectionFormat"] = "multi"
-            else:
-                ret["explode"] = True
-                ret["style"] = "form"
-        return ret
+        pass
 
     def schema2jsonschema(self, schema):
         """Return the JSON Schema Object for a given marshmallow
@@ -299,8 +216,4 @@ class OpenAPIConverter(FieldConverterMixin):
         """Method to create a dictionary containing a JSON reference to the
         schema in the spec
         """
-        schema_key = make_schema_key(schema)
-        ref_schema = self.spec.components.get_ref("schema", self.refs[schema_key])
-        if getattr(schema, "many", False):
-            return {"type": "array", "items": ref_schema}
-        return ref_schema
+        pass

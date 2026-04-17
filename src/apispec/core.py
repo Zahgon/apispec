@@ -194,20 +194,7 @@ class Components:
         :param bool lazy: register component only when referenced in the spec
         :param kwargs: plugin-specific arguments
         """
-        if component_id in self.responses:
-            raise DuplicateComponentNameError(
-                f'Another response with name "{component_id}" is already registered.'
-            )
-        ret = deepcopy(component) or {}
-        # Execute all helpers from plugins
-        for plugin in self._plugins:
-            try:
-                ret.update(plugin.response_helper(ret, **kwargs) or {})
-            except PluginMethodNotImplementedError:
-                continue
-        self._resolve_refs_in_response(ret)
-        self._register_component("response", component_id, ret, lazy=lazy)
-        return self
+        pass
 
     def parameter(
         self,
@@ -226,27 +213,7 @@ class Components:
         :param bool lazy: register component only when referenced in the spec
         :param kwargs: plugin-specific arguments
         """
-        if component_id in self.parameters:
-            raise DuplicateComponentNameError(
-                f'Another parameter with name "{component_id}" is already registered.'
-            )
-        ret = deepcopy(component) or {}
-        ret.setdefault("name", component_id)
-        ret["in"] = location
-
-        # if "in" is set to "path", enforce required flag to True
-        if location == "path":
-            ret["required"] = True
-
-        # Execute all helpers from plugins
-        for plugin in self._plugins:
-            try:
-                ret.update(plugin.parameter_helper(ret, **kwargs) or {})
-            except PluginMethodNotImplementedError:
-                continue
-        self._resolve_refs_in_parameter_or_header(ret)
-        self._register_component("parameter", component_id, ret, lazy=lazy)
-        return self
+        pass
 
     def header(
         self,
@@ -265,20 +232,7 @@ class Components:
 
         https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#headerObject
         """
-        ret = deepcopy(component) or {}
-        if component_id in self.headers:
-            raise DuplicateComponentNameError(
-                f'Another header with name "{component_id}" is already registered.'
-            )
-        # Execute all helpers from plugins
-        for plugin in self._plugins:
-            try:
-                ret.update(plugin.header_helper(ret, **kwargs) or {})
-            except PluginMethodNotImplementedError:
-                continue
-        self._resolve_refs_in_parameter_or_header(ret)
-        self._register_component("header", component_id, ret, lazy=lazy)
-        return self
+        pass
 
     def example(
         self, component_id: str, component: dict, *, lazy: bool = False
@@ -291,12 +245,7 @@ class Components:
 
         https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#exampleObject
         """
-        if component_id in self.examples:
-            raise DuplicateComponentNameError(
-                f'Another example with name "{component_id}" is already registered.'
-            )
-        self._register_component("example", component_id, component, lazy=lazy)
-        return self
+        pass
 
     def link(
         self, component_id: str, component: dict, *, lazy: bool = False
@@ -309,12 +258,7 @@ class Components:
 
         https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
         """
-        if component_id in self.links:
-            raise DuplicateComponentNameError(
-                f'Another link with name "{component_id}" is already registered.'
-            )
-        self._register_component("link", component_id, component, lazy=lazy)
-        return self
+        pass
 
     def security_scheme(self, component_id: str, component: dict) -> Components:
         """Add a security scheme which can be referenced.
@@ -322,26 +266,18 @@ class Components:
         :param str component_id: component_id to use as reference
         :param dict component: security scheme fields
         """
-        if component_id in self.security_schemes:
-            raise DuplicateComponentNameError(
-                f'Another security scheme with name "{component_id}" is already registered.'
-            )
-        self._register_component("security_scheme", component_id, component)
-        return self
+        pass
 
     def _resolve_schema(self, obj) -> None:
         """Replace schema reference as string with a $ref if needed
 
         Also resolve references in the schema
         """
-        if "schema" in obj:
-            obj["schema"] = self.get_ref("schema", obj["schema"])
-            self._resolve_refs_in_schema(obj["schema"])
+        pass
 
     def _resolve_examples(self, obj) -> None:
         """Replace example reference as string with a $ref"""
-        for name, example in obj.get("examples", {}).items():
-            obj["examples"][name] = self.get_ref("example", example)
+        pass
 
     def _resolve_refs_in_schema(self, schema: dict) -> None:
         if "properties" in schema:
@@ -363,74 +299,20 @@ class Components:
             self._resolve_refs_in_schema(schema["not"])
 
     def _resolve_refs_in_parameter_or_header(self, parameter_or_header) -> None:
-        self._resolve_schema(parameter_or_header)
-        self._resolve_examples(parameter_or_header)
-        # parameter content is OpenAPI v3+
-        for media_type in parameter_or_header.get("content", {}).values():
-            self._resolve_schema(media_type)
+        pass
 
     def _resolve_refs_in_request_body(self, request_body) -> None:
         # requestBody is OpenAPI v3+
-        for media_type in request_body["content"].values():
-            self._resolve_schema(media_type)
-            self._resolve_examples(media_type)
+        pass
 
     def _resolve_refs_in_response(self, response) -> None:
-        if self.openapi_version.major < 3:
-            self._resolve_schema(response)
-        else:
-            for media_type in response.get("content", {}).values():
-                self._resolve_schema(media_type)
-                self._resolve_examples(media_type)
-            for name, header in response.get("headers", {}).items():
-                response["headers"][name] = self.get_ref("header", header)
-                self._resolve_refs_in_parameter_or_header(response["headers"][name])
-            for name, link in response.get("links", {}).items():
-                response["links"][name] = self.get_ref("link", link)
+        pass
 
     def _resolve_refs_in_operation(self, operation) -> None:
-        if "parameters" in operation:
-            parameters = []
-            for parameter in operation["parameters"]:
-                parameter = self.get_ref("parameter", parameter)
-                self._resolve_refs_in_parameter_or_header(parameter)
-                parameters.append(parameter)
-            operation["parameters"] = parameters
-        if "callbacks" in operation:
-            for callback in operation["callbacks"].values():
-                if isinstance(callback, dict):
-                    for path in callback.values():
-                        self.resolve_refs_in_path(path)
-        if "requestBody" in operation:
-            self._resolve_refs_in_request_body(operation["requestBody"])
-        if "responses" in operation:
-            responses = {}
-            for code, response in operation["responses"].items():
-                response = self.get_ref("response", response)
-                self._resolve_refs_in_response(response)
-                responses[code] = response
-            operation["responses"] = responses
+        pass
 
     def resolve_refs_in_path(self, path) -> None:
-        if "parameters" in path:
-            parameters = []
-            for parameter in path["parameters"]:
-                parameter = self.get_ref("parameter", parameter)
-                self._resolve_refs_in_parameter_or_header(parameter)
-                parameters.append(parameter)
-            path["parameters"] = parameters
-        for method in (
-            "get",
-            "put",
-            "post",
-            "delete",
-            "options",
-            "head",
-            "patch",
-            "trace",
-        ):
-            if method in path:
-                self._resolve_refs_in_operation(path[method])
+        pass
 
 
 class APISpec:
@@ -500,17 +382,14 @@ class APISpec:
 
         :param dict yaml_dump_kwargs: Additional keyword arguments to pass to `yaml.dump`
         """
-        from .yaml_utils import dict_to_yaml
-
-        return dict_to_yaml(self.to_dict(), yaml_dump_kwargs)
+        pass
 
     def tag(self, tag: dict) -> APISpec:
         """Store information about a tag.
 
         :param dict tag: the dictionary storing information about the tag.
         """
-        self._tags.append(tag)
-        return self
+        pass
 
     def path(
         self,
@@ -533,49 +412,7 @@ class APISpec:
         :param list|None parameters: list of parameters relevant to all operations in this path
         :param kwargs: parameters used by any path helpers see :meth:`register_path_helper`
         """
-        # operations and parameters must be deepcopied because they are mutated
-        # in _clean_operations and operation helpers and path may be called twice
-        operations = deepcopy(operations) or {}
-        parameters = deepcopy(parameters) or []
-
-        # Execute path helpers
-        for plugin in self.plugins:
-            try:
-                ret = plugin.path_helper(
-                    path=path, operations=operations, parameters=parameters, **kwargs
-                )
-            except PluginMethodNotImplementedError:
-                continue
-            if ret is not None:
-                path = ret
-        if not path:
-            raise APISpecError("Path template is not specified.")
-
-        # Execute operation helpers
-        for plugin in self.plugins:
-            try:
-                plugin.operation_helper(path=path, operations=operations, **kwargs)
-            except PluginMethodNotImplementedError:
-                continue
-
-        self._clean_operations(operations)
-
-        # Process links if provided (OpenAPI 3+ only)
-        if "links" in kwargs and self.openapi_version.major >= 3:
-            self._process_links(operations, kwargs["links"])
-
-        self._paths.setdefault(path, operations).update(operations)
-        if summary is not None:
-            self._paths[path]["summary"] = summary
-        if description is not None:
-            self._paths[path]["description"] = description
-        if parameters:
-            parameters = self._clean_parameters(parameters)
-            self._paths[path]["parameters"] = parameters
-
-        self.components.resolve_refs_in_path(self._paths[path])
-
-        return self
+        pass
 
     def _clean_parameters(
         self,
@@ -589,31 +426,7 @@ class APISpec:
 
         :param list parameters: List of parameters mapping
         """
-        seen = set()
-        for parameter in [p for p in parameters if isinstance(p, dict)]:
-            # check missing name / location
-            missing_attrs = [attr for attr in ("name", "in") if attr not in parameter]
-            if missing_attrs:
-                raise InvalidParameterError(
-                    f"Missing keys {missing_attrs} for parameter"
-                )
-
-            # OpenAPI Spec 3 and 2 don't allow for duplicated parameters
-            # A unique parameter is defined by a combination of a name and location
-            unique_key = (parameter["name"], parameter["in"])
-            if unique_key in seen:
-                raise DuplicateParameterError(
-                    "Duplicate parameter with name {} and location {}".format(
-                        parameter["name"], parameter["in"]
-                    )
-                )
-            seen.add(unique_key)
-
-            # Add "required" attribute to path parameters
-            if parameter["in"] == "path":
-                parameter["required"] = True
-
-        return parameters
+        pass
 
     def _clean_operations(
         self,
@@ -627,35 +440,7 @@ class APISpec:
 
         :param dict operations: Dict mapping status codes to operations
         """
-        operation_names = set(operations)
-        valid_methods = set(VALID_METHODS[self.openapi_version.major])
-        invalid = {
-            key for key in operation_names - valid_methods if not key.startswith("x-")
-        }
-        if invalid:
-            raise APISpecError(
-                "One or more HTTP methods are invalid: {}".format(", ".join(invalid))
-            )
-
-        for operation in (operations or {}).values():
-            if "parameters" in operation:
-                operation["parameters"] = self._clean_parameters(
-                    operation["parameters"]
-                )
-            if "responses" in operation:
-                responses = {}
-                for code, response in operation["responses"].items():
-                    try:
-                        code = int(code)  # handles IntEnums like http.HTTPStatus
-                    except (TypeError, ValueError):
-                        if self.openapi_version.major < 3 and code != "default":
-                            warnings.warn(
-                                "Non-integer code not allowed in OpenAPI < 3",
-                                UserWarning,
-                                stacklevel=2,
-                            )
-                    responses[str(code)] = response
-                operation["responses"] = responses
+        pass
 
     def _process_links(
         self,
@@ -667,54 +452,4 @@ class APISpec:
         :param dict operations: Dict mapping HTTP methods to operation objects
         :param dict links_spec: Dict mapping link names to (route, method) or (route, method, parameters) tuples
         """
-        # Convert link tuples to proper link objects
-        link_objects = {}
-        for link_name, link_tuple in links_spec.items():
-            if (
-                not isinstance(link_tuple, tuple)
-                or len(link_tuple) < 2
-                or len(link_tuple) > 3
-            ):
-                raise APISpecError(
-                    f"Link '{link_name}' must be a tuple of (route, method) or (route, method, parameters)"
-                )
-
-            route = link_tuple[0]
-            method = link_tuple[1]
-            parameters = link_tuple[2] if len(link_tuple) == 3 else {}
-
-            if not isinstance(route, str):
-                raise APISpecError(f"Link '{link_name}' route must be a string")
-
-            # Validate method
-            method = method.lower()
-            valid_methods = set(VALID_METHODS[self.openapi_version.major])
-            if method not in valid_methods:
-                raise APISpecError(
-                    f"Link '{link_name}' has invalid HTTP method: {method}"
-                )
-
-            # Prefer operationId if defined
-            operation_id = (
-                self._paths.get(route, {}).get(method.lower(), {}).get("operationId")
-            )
-            link_obj: dict[str, typing.Any] = (
-                {"operationId": operation_id}
-                if operation_id
-                else {
-                    "operationRef": f"#/paths/{route.replace('~', '~0').replace('/', '~1')}/{method}"
-                }
-            )
-            if parameters:
-                link_obj["parameters"] = parameters
-
-            link_objects[link_name] = link_obj
-
-        # Inject links into all responses of all operations
-        for operation in operations.values():
-            if isinstance(operation, dict) and "responses" in operation:
-                for response in operation["responses"].values():
-                    if isinstance(response, dict):
-                        if "links" not in response:
-                            response["links"] = {}
-                        response["links"].update(deepcopy(link_objects))
+        pass

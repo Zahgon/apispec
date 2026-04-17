@@ -96,27 +96,7 @@ class FieldConverterMixin:
     openapi_version: Version
 
     def init_attribute_functions(self):
-        self.attribute_functions = [
-            # self.field2type_and_format should run first
-            # as other functions may rely on its output
-            self.field2type_and_format,
-            self.field2default,
-            self.field2choices,
-            self.field2read_only,
-            self.field2write_only,
-            self.field2range,
-            self.field2length,
-            self.field2pattern,
-            self.metadata2properties,
-            self.enum2properties,
-            self.nested2properties,
-            self.pluck2properties,
-            self.list2properties,
-            self.dict2properties,
-            self.timedelta2properties,
-            self.datetime2properties,
-            self.field2nullable,
-        ]
+        pass
 
     def map_to_openapi_type(self, field_cls, *args):
         """Set mapping for custom field class.
@@ -128,14 +108,7 @@ class FieldConverterMixin:
         - a pair of the form ``(type, format)``
         - a core marshmallow field type (in which case we reuse that type's mapping)
         """
-        if len(args) == 1 and args[0] in self.field_mapping:
-            openapi_type_field = self.field_mapping[args[0]]
-        elif len(args) == 2:
-            openapi_type_field = args
-        else:
-            raise TypeError("Pass core marshmallow field type or (type, fmt) pair.")
-
-        self.field_mapping[field_cls] = openapi_type_field
+        pass
 
     def add_attribute_function(self, func):
         """Method to add an attribute function to the list of attribute functions
@@ -157,9 +130,7 @@ class FieldConverterMixin:
             previously called attribute functions are accessible via the `ret`
             argument.
         """
-        bound_func = func.__get__(self)
-        setattr(self, func.__name__, bound_func)
-        self.attribute_functions.append(bound_func)
+        pass
 
     def field2property(self, field: marshmallow.fields.Field) -> dict:
         """Return the JSON Schema property definition given a marshmallow
@@ -188,27 +159,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        # If this type isn't directly in the field mapping then check the
-        # hierarchy until we find something that does.
-        for field_class in type(field).__mro__:
-            if field_class in self.field_mapping:
-                type_, fmt = self.field_mapping[field_class]
-                break
-        else:
-            warnings.warn(
-                f"Field of type {type(field)} does not inherit from marshmallow.Field.",
-                UserWarning,
-                stacklevel=2,
-            )
-            type_, fmt = "string", None
-
-        ret = {}
-        if type_:
-            ret["type"] = type_
-        if fmt:
-            ret["format"] = fmt
-
-        return ret
+        pass
 
     def field2default(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -222,15 +173,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        if "default" in field.metadata:
-            ret["default"] = field.metadata["default"]
-        else:
-            default = field.load_default
-            if default is not marshmallow.missing and not callable(default):
-                default = field._serialize(default, None, None)
-                ret["default"] = default
-        return ret
+        pass
 
     def field2choices(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -240,30 +183,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        attributes = {}
-
-        comparable = [
-            validator.comparable
-            for validator in field.validators
-            if hasattr(validator, "comparable")
-        ]
-        if comparable:
-            attributes["enum"] = comparable
-        else:
-            choices = [
-                OrderedSet(validator.choices)
-                for validator in field.validators
-                if hasattr(validator, "choices")
-            ]
-            if choices:
-                attributes["enum"] = list(functools.reduce(operator.and_, choices))
-
-        if field.allow_none:
-            enum = attributes.get("enum")
-            if enum is not None and None not in enum:
-                attributes["enum"].append(None)
-
-        return attributes
+        pass
 
     def field2read_only(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -273,10 +193,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        attributes = {}
-        if field.dump_only:
-            attributes["readOnly"] = True
-        return attributes
+        pass
 
     def field2write_only(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -286,10 +203,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        attributes = {}
-        if field.load_only and self.openapi_version.major >= 3:
-            attributes["writeOnly"] = True
-        return attributes
+        pass
 
     def field2nullable(self, field: marshmallow.fields.Field, ret) -> dict:
         """Return the dictionary of OpenAPI field attributes for a nullable field.
@@ -297,31 +211,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        attributes: dict = {}
-        if field.allow_none:
-            if self.openapi_version.major < 3:
-                attributes["x-nullable"] = True
-            elif self.openapi_version.minor < 1:
-                if "$ref" in ret:
-                    attributes["anyOf"] = [
-                        {"type": "object", "nullable": True},
-                        {"$ref": ret.pop("$ref")},
-                    ]
-                elif "allOf" in ret:
-                    attributes["anyOf"] = [
-                        *ret.pop("allOf"),
-                        {"type": "object", "nullable": True},
-                    ]
-                else:
-                    attributes["nullable"] = True
-            else:
-                if "$ref" in ret:
-                    attributes["anyOf"] = [{"$ref": ret.pop("$ref")}, {"type": "null"}]
-                elif "allOf" in ret:
-                    attributes["anyOf"] = [*ret.pop("allOf"), {"type": "null"}]
-                elif "type" in ret:
-                    attributes["type"] = [*make_type_list(ret.get("type")), "null"]
-        return attributes
+        pass
 
     def field2range(self, field: marshmallow.fields.Field, ret) -> dict:
         """Return the dictionary of OpenAPI field attributes for a set of
@@ -330,27 +220,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        validators = [
-            validator
-            for validator in field.validators
-            if (
-                hasattr(validator, "min")
-                and hasattr(validator, "max")
-                and not hasattr(validator, "equal")
-            )
-        ]
-
-        min_attr, max_attr = (
-            ("minimum", "maximum")
-            if set(make_type_list(ret.get("type"))) & {"number", "integer"}
-            else ("x-minimum", "x-maximum")
-        )
-
-        # Serialize min/max values with the field to which the validator is applied
-        return {
-            k: field._serialize(v, None, None)
-            for k, v in make_min_max_attributes(validators, min_attr, max_attr).items()
-        }
+        pass
 
     def field2length(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -361,29 +231,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        validators = [
-            validator
-            for validator in field.validators
-            if (
-                hasattr(validator, "min")
-                and hasattr(validator, "max")
-                and hasattr(validator, "equal")
-            )
-        ]
-
-        is_array = isinstance(
-            field, (marshmallow.fields.Nested, marshmallow.fields.List)
-        )
-        min_attr = "minItems" if is_array else "minLength"
-        max_attr = "maxItems" if is_array else "maxLength"
-
-        equal_list = [
-            validator.equal for validator in validators if validator.equal is not None
-        ]
-        if equal_list:
-            return {min_attr: equal_list[0], max_attr: equal_list[0]}
-
-        return make_min_max_attributes(validators, min_attr, max_attr)
+        pass
 
     def field2pattern(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -397,23 +245,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        regex_validators = (
-            v
-            for v in field.validators
-            if isinstance(getattr(v, "regex", None), re.Pattern)
-        )
-        v = next(regex_validators, None)
-        attributes = {} if v is None else {"pattern": v.regex.pattern}  # type:ignore
-
-        if next(regex_validators, None) is not None:
-            warnings.warn(
-                f"More than one regex validator defined on {type(field)} field. Only the "
-                "first one will be used in the output spec.",
-                UserWarning,
-                stacklevel=2,
-            )
-
-        return attributes
+        pass
 
     def metadata2properties(
         self, field: marshmallow.fields.Field, **kwargs: typing.Any
@@ -434,20 +266,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        # Dasherize metadata that starts with x_
-        metadata = {
-            key.replace("_", "-") if key.startswith("x_") else key: value
-            for key, value in field.metadata.items()
-            if isinstance(key, str)
-        }
-
-        # Avoid validation error with "Additional properties not allowed"
-        ret = {
-            key: value
-            for key, value in metadata.items()
-            if key in _VALID_PROPERTIES or key.startswith(_VALID_PREFIX)
-        }
-        return ret
+        pass
 
     def nested2properties(self, field: marshmallow.fields.Field, ret) -> dict:
         """Return a dictionary of properties from :class:`Nested <marshmallow.fields.Nested` fields.
@@ -460,27 +279,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        # Pluck is a subclass of Nested but is in essence a single field; it
-        # is treated separately by pluck2properties.
-        if isinstance(field, marshmallow.fields.Nested) and not isinstance(
-            field, marshmallow.fields.Pluck
-        ):
-            schema_dict = self.resolve_nested_schema(field.schema)  # type:ignore
-            if (
-                ret
-                and "$ref" in schema_dict
-                and (
-                    self.openapi_version.major < 3
-                    or (
-                        self.openapi_version.major == 3
-                        and self.openapi_version.minor == 0
-                    )
-                )
-            ):
-                ret.update({"allOf": [schema_dict]})
-            else:
-                ret.update(schema_dict)
-        return ret
+        pass
 
     def pluck2properties(self, field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of properties from :class:`Pluck <marshmallow.fields.Pluck` fields.
@@ -491,11 +290,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        if isinstance(field, marshmallow.fields.Pluck):
-            plucked_field = field.schema.fields[field.field_name]
-            ret = self.field2property(plucked_field)
-            return {"type": "array", "items": ret} if field.many else ret
-        return {}
+        pass
 
     def list2properties(self, field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of properties from :class:`List <marshmallow.fields.List>` fields.
@@ -505,10 +300,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        if isinstance(field, marshmallow.fields.List):
-            ret["items"] = self.field2property(field.inner)
-        return ret
+        pass
 
     def dict2properties(self, field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of properties from :class:`Dict <marshmallow.fields.Dict>` fields.
@@ -519,14 +311,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        if isinstance(field, marshmallow.fields.Dict):
-            value_field = field.value_field
-            if value_field:
-                ret["additionalProperties"] = self.field2property(value_field)
-            elif "additionalProperties" not in kwargs.get("ret", {}):
-                ret["additionalProperties"] = {}
-        return ret
+        pass
 
     def timedelta2properties(self, field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of properties from :class:`TimeDelta <marshmallow.fields.TimeDelta>` fields.
@@ -536,17 +321,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        if isinstance(field, marshmallow.fields.TimeDelta):
-            ret["x-unit"] = field.precision
-            # Required for Marshmallow <4. Can be removed when support for Marshmallow 3 is dropped.
-            # This overrides the type set in field2type_and_format (from DEFAULT_FIELD_MAPPING)
-            if hasattr(field, "serialization_type"):
-                ret["type"] = {
-                    int: "integer",
-                    float: "number",
-                }.get(field.serialization_type, "number")
-        return ret
+        pass
 
     def enum2properties(self, field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of properties from :class:`Enum <marshmallow.fields.Enum` fields.
@@ -554,17 +329,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        if isinstance(field, marshmallow.fields.Enum):
-            ret = self.field2property(field.field)
-            if field.by_value is False:
-                choices = (m for m in field.enum.__members__)
-            else:
-                choices = (m.value for m in field.enum)
-            ret["enum"] = [field.field._serialize(v, None, None) for v in choices]
-            if field.allow_none and None not in ret["enum"]:
-                ret["enum"].append(None)
-        return ret
+        pass
 
     def datetime2properties(self, field, **kwargs: typing.Any) -> dict:
         """Return a dictionary of properties from :class:`DateTime <marshmallow.fields.DateTime` fields.
@@ -572,46 +337,7 @@ class FieldConverterMixin:
         :param Field field: A marshmallow field.
         :rtype: dict
         """
-        ret = {}
-        if isinstance(field, marshmallow.fields.DateTime):
-            if field.format in ("iso", "iso8601") or field.format is None:
-                # Will return { "type": "string", "format": "date-time" }
-                # as specified inside DEFAULT_FIELD_MAPPING
-                pass
-            elif field.format in ("rfc", "rfc822"):
-                ret = {
-                    "type": "string",
-                    "format": None,
-                    "example": "Wed, 02 Oct 2002 13:00:00 GMT",
-                    "pattern": r"((Mon|Tue|Wed|Thu|Fri|Sat|Sun), ){0,1}\d{2} "
-                    + r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} "
-                    + r"(UT|GMT|EST|EDT|CST|CDT|MST|MDT|PST|PDT|(Z|A|M|N)|(\+|-)\d{4})",
-                }
-            elif field.format == "timestamp":
-                ret = {
-                    "type": "number",
-                    "format": "float",
-                    "example": "1676451245.596",
-                    "min": "0",
-                }
-            elif field.format == "timestamp_ms":
-                ret = {
-                    "type": "number",
-                    "format": "float",
-                    "example": "1676451277514.654",
-                    "min": "0",
-                }
-            else:
-                ret = {
-                    "type": "string",
-                    "format": None,
-                    "pattern": (
-                        field.metadata["pattern"]
-                        if field.metadata.get("pattern")
-                        else None
-                    ),
-                }
-        return ret
+        pass
 
 
 def make_type_list(types):
@@ -622,11 +348,7 @@ def make_type_list(types):
     and returns it as a list, be it an empty or single-element list.
     This is useful to factorize type-conditional code or code adding a type.
     """
-    if types is None:
-        return []
-    if isinstance(types, str):
-        return [types]
-    return types
+    pass
 
 
 def make_min_max_attributes(validators, min_attr, max_attr) -> dict:
@@ -639,11 +361,4 @@ def make_min_max_attributes(validators, min_attr, max_attr) -> dict:
     :param min_attr string: The OpenAPI attribute for the minimum value
     :param max_attr string: The OpenAPI attribute for the maximum value
     """
-    attributes = {}
-    min_list = [validator.min for validator in validators if validator.min is not None]
-    max_list = [validator.max for validator in validators if validator.max is not None]
-    if min_list:
-        attributes[min_attr] = max(min_list)
-    if max_list:
-        attributes[max_attr] = min(max_list)
-    return attributes
+    pass

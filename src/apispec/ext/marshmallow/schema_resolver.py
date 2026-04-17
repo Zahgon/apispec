@@ -19,20 +19,7 @@ class SchemaResolver:
         """Resolve marshmallow Schemas in a dict mapping operation to OpenApi `Operation Object
         <https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#operationObject>`_
         """
-
-        for operation in operations.values():
-            if not isinstance(operation, dict):
-                continue
-            if "parameters" in operation:
-                operation["parameters"] = self.resolve_parameters(
-                    operation["parameters"]
-                )
-            if self.openapi_version.major >= 3:
-                self.resolve_callback(operation.get("callbacks", {}))
-                if "requestBody" in operation:
-                    self.resolve_schema(operation["requestBody"])
-            for response in operation.get("responses", {}).values():
-                self.resolve_response(response)
+        pass
 
     def resolve_callback(self, callbacks):
         """Resolve marshmallow Schemas in a dict mapping callback name to OpenApi `Callback Object
@@ -74,10 +61,7 @@ class SchemaResolver:
 
 
         """
-        for callback in callbacks.values():
-            if isinstance(callback, dict):
-                for path in callback.values():
-                    self.resolve_operations(path)
+        pass
 
     def resolve_parameters(self, parameters):
         """Resolve marshmallow Schemas in a list of OpenAPI `Parameter Objects
@@ -146,21 +130,7 @@ class SchemaResolver:
 
         :param list parameters: the list of OpenAPI parameter objects to resolve.
         """
-        resolved = []
-        for parameter in parameters:
-            if (
-                isinstance(parameter, dict)
-                and not isinstance(parameter.get("schema", {}), dict)
-                and "in" in parameter
-            ):
-                schema_instance = resolve_schema_instance(parameter.pop("schema"))
-                resolved += self.converter.schema2parameters(
-                    schema_instance, location=parameter.pop("in"), **parameter
-                )
-            else:
-                self.resolve_schema(parameter)
-                resolved.append(parameter)
-        return resolved
+        pass
 
     def resolve_response(self, response):
         """Resolve marshmallow Schemas in OpenAPI `Response Objects
@@ -189,10 +159,7 @@ class SchemaResolver:
 
         :param dict response: the response object to resolve.
         """
-        self.resolve_schema(response)
-        if "headers" in response:
-            for header in response["headers"].values():
-                self.resolve_schema(header)
+        pass
 
     def resolve_schema(self, data):
         """Resolve marshmallow Schemas in an OpenAPI component or header -
@@ -220,18 +187,7 @@ class SchemaResolver:
         :param dict|str data: either a parameter or response dictionary that may
             contain a schema, or a reference provided as string
         """
-        if not isinstance(data, dict):
-            return
-
-        # OAS 2 component or OAS 3 parameter or header
-        if "schema" in data:
-            data["schema"] = self.resolve_schema_dict(data["schema"])
-        # OAS 3 component except header
-        if self.openapi_version.major >= 3:
-            if "content" in data:
-                for content in data["content"].values():
-                    if "schema" in content:
-                        content["schema"] = self.resolve_schema_dict(content["schema"])
+        pass
 
     def resolve_schema_dict(self, schema):
         """Resolve a marshmallow Schema class, object, or a string that resolves
@@ -281,21 +237,4 @@ class SchemaResolver:
 
         :param string|Schema|dict schema: the schema to resolve.
         """
-        if isinstance(schema, dict):
-            if schema.get("type") == "array" and "items" in schema:
-                schema["items"] = self.resolve_schema_dict(schema["items"])
-            if schema.get("type") == "object" and "properties" in schema:
-                schema["properties"] = {
-                    k: self.resolve_schema_dict(v)
-                    for k, v in schema["properties"].items()
-                }
-            for keyword in ("oneOf", "anyOf", "allOf"):
-                if keyword in schema:
-                    schema[keyword] = [
-                        self.resolve_schema_dict(s) for s in schema[keyword]
-                    ]
-            if "not" in schema:
-                schema["not"] = self.resolve_schema_dict(schema["not"])
-            return schema
-
-        return self.converter.resolve_nested_schema(schema)
+        pass
